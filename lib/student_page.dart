@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:alert_demo/custom%20notification.dart';
+import 'package:alert_demo/custom_app_text_field.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:workmanager/workmanager.dart';
 
 class StudentPage extends StatefulWidget {
   const StudentPage({super.key});
@@ -13,19 +16,19 @@ class StudentPage extends StatefulWidget {
 class _StudentPageState extends State<StudentPage> {
   final TextEditingController studentController = TextEditingController();
   late Timer _timer;
-  bool _isNumberEntered = false;
   final FirebaseFirestore fireStore = FirebaseFirestore.instance;
   bool isLoading = false;
   int studentCount = 0;
+  final formKey = GlobalKey<FormState>();
 
   @override
   void initState() {
     super.initState();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      fetchStudentCount();
-      // _showAlertDialog();
-    });
+    //
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   fetchStudentCount();
+    // });
+    startBackgroundTask();
     _startTimer();
   }
 
@@ -42,7 +45,7 @@ class _StudentPageState extends State<StudentPage> {
       setState(() {
         studentCount = snapshot.docs.length;
       });
-      print("834657865 $studentCount");
+      debugPrint("834657865 $studentCount");
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -52,10 +55,24 @@ class _StudentPageState extends State<StudentPage> {
     }
   }
 
+  void startBackgroundTask() {
+    Workmanager().registerPeriodicTask(
+      "periodic-task-identifier",
+      "simplePeriodicTask",
+      frequency: Duration(seconds: 30),
+    );
+  }
+
   void _startTimer() {
-    _timer = Timer.periodic(Duration(seconds: 20), (timer) {
-      if (!_isNumberEntered) {
-        _showAlertDialog();
+    _timer = Timer.periodic(Duration(seconds: 20), (timer) async {
+      final sharedPreference = await SharedPreferences.getInstance();
+      bool isDataSaved = sharedPreference.getBool("isDataSaved") ?? false;
+      if (!isDataSaved) {
+        NotificationService.showNotification(
+          'Alert Reminder',
+          'Please add total number of students for the midday meal',
+          'Notification payload',
+        );
       }
     });
   }
@@ -72,10 +89,15 @@ class _StudentPageState extends State<StudentPage> {
 
     try {
       await fireStore.collection('students').add({'student_num': students});
+      final sharedPreference = await SharedPreferences.getInstance();
+      sharedPreference.setBool("isDataSaved", true);
       studentController.clear();
-      fetchStudentCount();
+      Workmanager().registerPeriodicTask(
+        "periodic-task-identifier",
+        "reset",
+        frequency: Duration(hours: 12),
+      );
       showSnackBar("Student Added Successfully!");
-      Navigator.of(context).pop();
     } catch (e) {
       showSnackBar("An error occurred: ${e.toString()}");
     } finally {
@@ -93,64 +115,95 @@ class _StudentPageState extends State<StudentPage> {
     }
   }
 
-  void _showAlertDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text("Enter Student Number",
-              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
-          content: TextField(
-            controller: studentController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(hintText: "Enter number"),
-          ),
-          actions: [
-            isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: setStudents,
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Form(
+            key: formKey,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                SizedBox(
+                  height: 60,
+                ),
+                Text(
+                  "Student Midday Meal",
+                  style: TextStyle(
+                    fontFamily: 'Roboto',
+                    fontSize: 26,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                SizedBox(
+                  height: 60,
+                ),
+                AppTextField(
+                  controller: studentController,
+                  textCapitalization: TextCapitalization.none,
+                  keyBoardType: TextInputType.number,
+                  validator: (value) {
+                    if (value == null || value.isEmpty) {
+                      return "Field is required";
+                    }
+                    return null;
+                  },
+                  maxLength: 10,
+                  labelText: "Student Number",
+                ),
+                SizedBox(height: 30),
+                Container(
+                  width: MediaQuery.of(context).size.width - 40,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        colors: [
+                          Color(0xff04b3fb),
+                          Color(0xffe6e6fb),
+                        ],
+                        begin: AlignmentDirectional.centerStart,
+                        end: AlignmentDirectional.centerEnd),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      if (formKey.currentState == null ||
+                          formKey.currentState!.validate()) {
+                        setStudents();
+                      }
+                    },
                     style: ButtonStyle(
                         elevation: WidgetStateProperty.all(0),
                         backgroundColor: const WidgetStatePropertyAll(
-                          Colors.blueAccent,
+                          Colors.transparent,
                         ),
                         shape: WidgetStatePropertyAll(
                           RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
                           ),
                         )),
-                    child: const Text("Submit", style: TextStyle(fontSize: 18)),
+                    child: Center(
+                        child: isLoading == true
+                            ? CircularProgressIndicator.adaptive()
+                            : Text(
+                                "Submit",
+                                style: TextStyle(
+                                  fontFamily: 'Roboto',
+                                  fontSize: 16,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              )),
                   ),
-          ],
-        );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          "Student Number Input",
-          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18),
-        ),
-      ),
-      body: GestureDetector(
-        onTap: ()  {
-           NotificationService.showNotification(
-            'New Notification',
-            'This is a custom notification!',
-            'Notification payload',
-          );
-        },
-        child: Center(
-          child: Text(
-            "Total Students : ${studentController.text}",
-            style: TextStyle(fontSize: 24),
+                ),
+                SizedBox(height: 60),
+              ],
+            ),
           ),
         ),
       ),
