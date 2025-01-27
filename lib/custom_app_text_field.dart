@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-
-
 class AppTextField extends StatelessWidget {
   final double? width;
   final double? height;
@@ -64,7 +62,7 @@ class AppTextField extends StatelessWidget {
     this.obscuringCharacter = '•',
     this.textCapitalization = TextCapitalization.words,
     this.contentPadding =
-    const EdgeInsets.symmetric(vertical: 12, horizontal: 15),
+    const EdgeInsets.symmetric(vertical: 0, horizontal: 15),
   });
 
   @override
@@ -72,9 +70,7 @@ class AppTextField extends StatelessWidget {
     double w = MediaQuery.of(context).size.width;
     return SizedBox(
       height: height,
-      width: w * width!,
       child: TextFormField(
-
         onFieldSubmitted: onFieldSubmitted,
         textCapitalization: textCapitalization,
         enabled: enabled,
@@ -99,37 +95,40 @@ class AppTextField extends StatelessWidget {
         ),
         obscuringCharacter: obscuringCharacter,
         decoration: InputDecoration(
-            prefixIcon: prefixIcon,
-            counterText: '',
-            prefix: leadingIcon,
-            filled: readOnly,
-            hintText: hintText,
-            suffixIcon: iconData,
-            labelText: labelText == '' ? null : labelText,
-            contentPadding: contentPadding,
-            alignLabelWithHint: true,
-            hintStyle: const TextStyle(
-              color: Colors.grey,
-              fontFamily: 'Roboto',
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
+          prefixIcon: prefixIcon,
+          counterText: '',
+          prefix: leadingIcon,
+          filled: readOnly,
+          hintText: hintText,
+          suffixIcon: iconData,
+          labelText: labelText == '' ? null : labelText,
+          contentPadding: contentPadding,
+          alignLabelWithHint: true,
+          hintStyle: const TextStyle(
+            color: Colors.grey,
+            fontFamily: 'Roboto',
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+          ),
+          border: UnderlineInputBorder(
+            borderSide: BorderSide(
+              color: borderColor ?? Colors.grey, // Default underline color
+              width: 1.0,
             ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
-              borderSide: BorderSide(
-                color: Colors.grey,
-              ),
+          ),
+          enabledBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              color: borderColor ?? Colors.grey, // Default underline color
+              width: 1.0,
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
-              borderSide: BorderSide(
-                color: Colors.grey,
-              ),
+          ),
+          focusedBorder: UnderlineInputBorder(
+            borderSide: BorderSide(
+              color: borderColor ?? Theme.of(context).primaryColor, // Highlight color
+              width: 2.0,
             ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(5),
-              borderSide: BorderSide(color: Colors.grey),
-            )),
+          ),
+        ),
       ),
     );
   }

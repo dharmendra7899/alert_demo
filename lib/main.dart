@@ -1,5 +1,7 @@
 import 'package:alert_demo/custom%20notification.dart';
+import 'package:alert_demo/splash_screen.dart';
 import 'package:alert_demo/student_page.dart';
+import 'package:alert_demo/student_submit_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -12,7 +14,6 @@ void main() async {
   await NotificationService.initialize();
   await requestNotificationPermission();
   Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
-
   runApp(MyApp());
 }
 
@@ -22,14 +23,15 @@ void callbackDispatcher() {
     if (task == 'reset') {
       sharedPreference.clear();
     }
+
     bool isDataSaved = sharedPreference.getBool("isDataSaved") ?? false;
     if (!isDataSaved) {
-      NotificationService.showNotification(
+      await NotificationService.showNotificationWithRepeat(
         'Alert Reminder',
-        'Please add total number of students for the midday meal',
-        'Notification payload',
+        'Please add total number of students for the midday meal',"Notification",
       );
     }
+
     return Future.value(true);
   });
 }
@@ -50,9 +52,33 @@ Future<void> requestNotificationPermission() async {
     if (status.isGranted) {
       debugPrint("Notification permission granted.");
     } else {
-      openAppSettings();
+      showDialog(
+        context: NotificationService.navigatorKey.currentContext!,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text("Notification Permission Required"),
+            content: Text(
+                "To receive important updates, please enable notifications in the app settings."),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text("OK"),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
+}
+
+
+Future<void> guideUserToEnableSoundAndVibration() async {
+  debugPrint(
+      "Please ensure sound and vibration are enabled in the device settings.");
+  openAppSettings();
 }
 
 class MyApp extends StatelessWidget {
@@ -65,8 +91,10 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
-        '/': (context) => StudentPage(),
+        '/': (context) => SplashScreen(),
+        '/splash': (context) => SplashScreen(),
         '/home': (context) => StudentPage(),
+        '/student': (context) => StudentSubmitScreen(),
       },
     );
   }

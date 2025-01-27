@@ -3,65 +3,55 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin
-  _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+      _flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
   static final GlobalKey<NavigatorState> navigatorKey =
-  GlobalKey<NavigatorState>();
+      GlobalKey<NavigatorState>();
 
   static Future<void> initialize() async {
     const AndroidInitializationSettings androidSettings =
-    AndroidInitializationSettings('@drawable/notification_icon');
+        AndroidInitializationSettings('@drawable/notification_icon');
     const DarwinInitializationSettings iosSettings =
-    DarwinInitializationSettings(
+        DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
 
     const InitializationSettings initializationSettings =
-    InitializationSettings(android: androidSettings, iOS: iosSettings);
+        InitializationSettings(android: androidSettings, iOS: iosSettings);
 
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
-      onDidReceiveNotificationResponse: _onNotificationTapped, // Ensure this is set
+      onDidReceiveNotificationResponse: _onNotificationTapped,
     );
 
-    // Request permissions for iOS
     await _flutterLocalNotificationsPlugin
         .resolvePlatformSpecificImplementation<
-        IOSFlutterLocalNotificationsPlugin>()
+            IOSFlutterLocalNotificationsPlugin>()
         ?.requestPermissions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+          alert: true,
+          badge: true,
+          sound: true,
+        );
   }
 
-  /// Show a local notification with interactive buttons
-  static Future<void> showNotification(
+  static Future<void> showNotificationWithRepeat(
       String title, String body, String payload) async {
     const AndroidNotificationDetails androidDetails =
-    AndroidNotificationDetails(
+        AndroidNotificationDetails(
       'your_channel_id',
-      'Your Channel Name',
+      'Mid day Meal',
       channelDescription: 'This is your channel description',
       importance: Importance.max,
       priority: Priority.high,
       showWhen: true,
-      actions: <AndroidNotificationAction>[
-        AndroidNotificationAction(
-          'submit', // Action ID
-          'Submit', // Action button text
-          icon: DrawableResourceAndroidBitmap('@drawable/notification_icon'),
-        ),
-        AndroidNotificationAction(
-          'cancel', // Action ID
-          'Cancel', // Action button text
-        ),
-      ],
+      playSound: true,
+      ongoing: true,
+      sound: RawResourceAndroidNotificationSound('notification_sound'),
     );
 
     const NotificationDetails notificationDetails =
-    NotificationDetails(android: androidDetails);
+        NotificationDetails(android: androidDetails);
 
     await _flutterLocalNotificationsPlugin.show(
       0, // Notification ID
@@ -70,9 +60,12 @@ class NotificationService {
       notificationDetails,
       payload: payload,
     );
+
+    Future.delayed(Duration(seconds: 5), () async {
+      await showNotificationWithRepeat(title, body, payload);
+    });
   }
 
-  /// Handle notification tap (when an action button is clicked)
   static Future<void> _onNotificationTapped(
       NotificationResponse notificationResponse) async {
     final String? actionId = notificationResponse.actionId;
@@ -91,7 +84,8 @@ class NotificationService {
       barrierDismissible: true,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text(title, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
+          title: Text(title,
+              style: TextStyle(fontWeight: FontWeight.w500, fontSize: 18)),
           content: TextField(
             controller: studentController,
             keyboardType: TextInputType.number,
